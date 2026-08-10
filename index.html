@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskTime - Gerenciador de Tarefas e Tempo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        body {
+            background-color: #f0f4f8;
+            color: #2d3748;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .data-hora { margin-top: 10px; color: #4a5568; }
+
+        .adicionar-tarefa {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        input, button, select {
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        input, select { flex: 1; min-width: 130px; }
+        input[type="date"] { min-width: 150px; }
+        button {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2b6cb0; }
+        .btn-secundario { background: #718096; }
+        .btn-secundario:hover { background: #4a5568; }
+        .btn-sucesso { background: #38a169; }
+        .btn-sucesso:hover { background: #2f855a; }
+        .btn-amarelo { background: #d69e2e; }
+        .btn-amarelo:hover { background: #b7791f; }
+
+        .tarefas {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 25px;
+        }
+        .tarefa {
+            padding: 15px 18px;
+            border-bottom: 1px solid #edf2f7;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.95rem;
+        }
+        .tarefa:last-child { border-bottom: none; }
+        .tarefa-concluida { text-decoration: line-through; color: #718096; }
+        .tarefa-nome { flex: 1; min-width: 150px; }
+        .categoria {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: #ebf8ff;
+            color: #2c5282;
+        }
+        .data-tarefa { font-size: 0.85rem; color: #718096; }
+        .tempo { font-weight: 600; color: #38a169; min-width: 70px; }
+        .acoes { display: flex; gap: 5px; }
+        .btn-excluir {
+            background-color: #e53e3e;
+            padding: 7px 10px;
+            font-size: 0.85rem;
+        }
+        .btn-excluir:hover { background-color: #c53030; }
+
+        .abas {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .aba {
+            padding: 10px 20px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            color: #4a5568;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .aba.ativa { background: #3182ce; color: white; }
+        .conteudo-aba { display: none; }
+        .conteudo-aba.visivel { display: block; }
+
+        .relatorio, .analise, .comparativo {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        .relatorio h2, .analise h2, .comparativo h2 {
+            margin-bottom: 20px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .botoes-exportar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filtro-periodo {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .estatisticas {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .card-stat {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .card-stat h3 { font-size: 1.7rem; margin-bottom: 4px; }
+        .card-stat p { color: #4a5568; font-size: 0.9rem; }
+        .stat-total { background: #ebf8ff; color: #2b6cb0; }
+        .stat-concluidas { background: #f0fff4; color: #2f855a; }
+        .stat-pendentes { background: #fef5e7; color: #c05621; }
+        .stat-media { background: #faf5ff; color: #6b46c1; }
+        .stat-destaque { background: #fef3c7; color: #b45309; }
+
+        .grade-dias {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .card-dia {
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .card-dia .dia-semana { font-weight: 600; color: #2d3748; }
+        .card-dia .horas-dia { color: #2f855a; font-weight: bold; margin: 4px 0; }
+        .card-dia .qtd-dia { font-size: 0.85rem; color: #718096; }
+
+        .chart-container {
+            position: relative;
+            height: 240px;
+            margin-top: 10px;
+        }
+        .resumo-categorias {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .item-cat {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .barra-cat {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .barra-preencher {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        /* 📊 COMPARAÇÃO */
+        .bloco-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 600px) {
+            .bloco-compare { grid-template-columns: 1fr; }
+        }
+        .periodo-bloco {
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+        .periodo-bloco h4 { text-align: center; margin-bottom: 12px; color: #2d3748; }
+        .diferenca {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .diferenca.positivo { background: #f0fff4; color: #2f855a; }
+        .diferenca.negativo { background: #fed7d7; color: #c53030; }
+        .diferenca.neutro { background: #f7fafc; color: #718096; }
+
+        /* 🖨️ IMPRESSÃO / PDF */
+        @media print {
+            body { background: white; padding: 0; }
+            .aba, .botoes-exportar, .acoes, .adicionar-tarefa, header { display: none !important; }
+            .conteudo-aba { display: block !important; }
+            .relatorio, .analise { box-shadow: none; padding: 10px; }
+            .container { max-width: 100%; margin: 0; }
+        }
+
+        .carregando {
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+            display: none;
+        }
+    </style>
+    <!-- PWA: Instalação como App -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3182ce">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TaskTime">
+    <link rel="apple-touch-icon" href="icone-192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 TaskTime</h1>
+            <p>Gerenciador de Tarefas, Tempo e Relatórios</p>
+            <div class="data-hora" id="dataHora"></div>
+        </header>
+
+        <div class="abas">
+            <button class="aba ativa" onclick="mostrarAba('tarefas')">📝 Tarefas</button>
+            <button class="aba" onclick="mostrarAba('semanal')">📅 Semanal</button>
+            <button class="aba" onclick="mostrarAba('mensal')">📆 Mensal</button>
+            <button class="aba" onclick="mostrarAba('comparar')">🔄 Comparar</button>
+        </div>
+
+        <!-- 📝 TAREFAS -->
+        <div id="aba-tarefas" class="conteudo-aba visivel">
+            <section class="adicionar-tarefa">
+                <input type="text" id="nomeTarefa" placeholder="Nome da tarefa..." required>
+                <input type="date" id="dataTarefa">
+                <input type="time" id="tempoTarefa">
+                <select id="categoria">
+                    <option value="Trabalho">💼 Trabalho</option>
+                    <option value="Estudo">📚 Estudo</option>
+                    <option value="Pessoal">🏠 Pessoal</option>
+                    <option value="Lazer">🎮 Lazer</option>
+                </select>
+                <button onclick="adicionarTarefa()">+ Adicionar</button>
+            </section>
+
+            <section class="tarefas" id="listaTarefas"></section>
+
+            <section class="analise" id="secao-geral">
+                <div class="botoes-exportar">
+                    <button class="btn-amarelo" onclick="window.print()">🖨️ Imprimir</button>
+                    <button class="btn-sucesso" onclick="exportarPDF('secao-geral')">📄 Baixar PDF</button>
+                </div>
+                <h2>📊 Visão Geral</h2>
+                <div class="estatisticas">
+                    <div class="card-stat stat-total"><h3 id="totalTarefas">0</h3><p>Total de Tarefas</p></div>
+                    <div class="card-stat stat-concluidas"><h3 id="concluidas">0</h3><p>Concluídas</p></div>
+                    <div class="card-stat stat-pendentes"><h3 id="pendentes">0</h3><p>Pendentes</p></div>
+                    <div class="card-stat stat-media"><h3 id="tempoTotal">0h</h3><p>Tempo Total</p></div>
+                </div>
+                <div class="chart-container"><canvas id="graficoGeral"></canvas></div>
+            </section>
+        </div>
+
+        <!-- 📅 SEMANAL -->
+        <div id="aba-semanal" class="conteudo-aba">
+            <section class="relatorio" id="rel-semanal">
+                <div class="botoes-exportar">
+                    <button class="btn-amarelo" onclick="window.print()">🖨️ Imprimir</button>
+                    <button class="btn-sucesso" onclick="exportarPDF('rel-semanal')">📄 Baixar PDF</button>
+                </div>
+                <h2>📅 Relatório Semanal</h2>
+                <div class="filtro-periodo">
+                    <label>Semana de:</label>
+                    <input type="date" id="inicioSemana" onchange="gerarRelatorioSemanal()">
+                    <button class="btn-secundario" onclick="usarSemanaAtual()">Hoje</button>
+                </div>
+                <div class="estatisticas">
+                    <div class="card-stat stat-total"><h3 id="sem-total">0</h3><p>Tarefas</p></div>
+                    <div class="card-stat stat-concluidas"><h3 id="sem-concluidas">0</h3><p>Concluídas</p></div>
+                    <div class="card-stat stat-media"><h3 id="sem-horas">0h</h3><p>Horas</p></div>
+                    <div class="card-stat stat-pendentes"><h3 id="sem-media">0h</h3><p>Média/dia</p></div>
+                </div>
+                <h4>Por Dia</h4>
+                <div class="grade-dias" id="gradeDiasSemana"></div>
+                <div class="chart-container"><canvas id="graficoSemana"></canvas></div>
+                <div class="resumo-categorias">
+                    <h4>Por Categoria</h4>
+                    <div id="catSemana"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 📆 MENSAL -->
+        <div id="aba-mensal" class="conteudo-aba">
+            <section class="relatorio" id="rel-mensal">
+                <div class="botoes-exportar">
+                    <button class="btn-amarelo" onclick="window.print()">🖨️ Imprimir</button>
+                    <button class="btn-sucesso" onclick="exportarPDF('rel-mensal')">📄 Baixar PDF</button>
+                </div>
+                <h2>📆 Relatório Mensal</h2>
+                <div class="filtro-periodo">
+                    <label>Mês:</label>
+                    <select id="mesRelatorio" onchange="gerarRelatorioMensal()"></select>
+                    <button class="btn-secundario" onclick="usarMesAtual()">Atual</button>
+                </div>
+                <div class="estatisticas">
+                    <div class="card-stat stat-total"><h3 id="mes-total">0</h3><p>Total</p></div>
+                    <div class="card-stat stat-concluidas"><h3 id="mes-concluidas">0</h3><p>Concluídas</p></div>
+                    <div class="card-stat stat-media"><h3 id="mes-horas">0h</h3><p>Horas/Mês</p></div>
+                    <div class="card-stat stat-pendentes"><h3 id="mes-media">0h</h3><p>Média/dia</p></div>
+                </div>
+                <div class="chart-container"><canvas id="graficoMes"></canvas></div>
+                <div class="resumo-categorias">
+                    <h4>Por Categoria</h4>
+                    <div id="catMes"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 🔄 COMPARAR PERÍODOS -->
+        <div id="aba-comparar" class="conteudo-aba">
+            <section class="comparativo" id="sec-comparar">
+                <div class="botoes-exportar">
+                    <button class="btn-amarelo" onclick="window.print()">🖨️ Imprimir</button>
+                    <button class="btn-sucesso" onclick="exportarPDF('sec-comparar')">📄 Baixar PDF</button>
+                </div>
+                <h2>🔄 Comparar Períodos</h2>
+                <div class="filtro-periodo">
+                    <label>Período 1:</label>
+                    <input type="date" id="comp1-inicio">
+                    <input type="date" id="comp1-fim">
+                    <label>Período 2:</label>
+                    <input type="date" id="comp2-inicio">
+                    <input type="date" id="comp2-fim">
+                    <button onclick="calcularComparacao()">Comparar</button>
+                </div>
+                <div class="carregando" id="load-compare">Processando...</div>
+
+                <div id="resultado-compare" style="display:none;">
+                    <div class="bloco-compare">
+                        <div class="periodo-bloco">
+                            <h4 id="tit-comp1">Período 1</h4>
+                            <div class="estatisticas" style="grid-template-columns: 1fr;">
+                                <div class="card-stat stat-total"><h3 id="c1-total">0</h3><p>Total Tarefas</p></div>
+                                <div class="card-stat stat-concluidas"><h3 id="c1-concluidas">0</h3><p>Concluídas</p></div>
+                                <div class="card-stat stat-media"><h3 id="c1-horas">0h</h3><p>Horas Totais</p></div>
+                            </div>
+                        </div>
+                        <div class="periodo-bloco">
+                            <h4 id="tit-comp2">Período 2</h4>
+                            <div class="estatisticas" style="grid-template-columns: 1fr;">
+                                <div class="card-stat stat-total"><h3 id="c2-total">0</h3><p>Total Tarefas</p></div>
+                                <div class="card-stat stat-concluidas"><h3 id="c2-concluidas">0</h3><p>Concluídas</p></div>
+                                <div class="card-stat stat-media"><h3 id="c2-horas">0h</h3><p>Horas Totais</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="dif-total" class="diferenca"></div>
+                    <div id="dif-concluidas" class="diferenca"></div>
+                    <div id="dif-horas" class="diferenca"></div>
+
+                    <div class="chart-container" style="height: 280px; margin-top:25px;">
+                        <canvas id="graficoComparacao"></canvas>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+        let tarefas = [];
+        let graficos = {};
+
+        const CORES_CATS = {
+            'Trabalho': '#3182ce', 'Estudo': '#805ad5', 'Pessoal': '#38a169', 'Lazer': '#f6ad55'
+        };
+        const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        function atualizarDataHora() {
+            const agora = new Date();
+            document.getElementById('dataHora').textContent = 
+                agora.toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long'}) + ' • ' + 
+                agora.toLocaleTimeString('pt-BR');
+        }
+        function horaParaMinutos(hora) {
+            if (!hora) return 30;
+            const [h, m] = hora.split(':').map(Number);
+            return h*60 + m;
+        }
+        function minutosParaHoras(min) {
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return m > 0 ? `${h}h ${m}min` : `${h}h`;
+        }
+        function formatarDataISO(d) { return d.toISOString().split('T')[0]; }
+        function parseDataISO(s) {
+            if (!s) return null;
+            const [aa, mm, dd] = s.split('-').map(Number);
+            return new Date(aa, mm-1, dd);
+        }
+        function diasEntre(inicio, fim) {
+            const dias = [];
+            for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+                dias.push(formatarDataISO(new Date(d)));
+            }
+            return dias;
+        }
+
+        function salvar() { localStorage.setItem('tarefas', JSON.stringify(tarefas)); }
+        function carregar() {
+            const d = localStorage.getItem('tarefas');
+            if (d) tarefas = JSON.parse(d);
+            document.getElementById('dataTarefa').value = formatarDataISO(new Date());
+            popularMeses();
+            usarSemanaAtual();
+            usarMesAtual();
+            preencherDatasComparacao();
+            renderizarTarefas();
+            atualizarVisaoGeral();
+        }
+
+        function mostrarAba(nome) {
+            document.querySelectorAll('.aba').forEach(b => b.classList.remove('ativa'));
+            document.querySelectorAll('.conteudo-aba').forEach(c => c.classList.remove('visivel'));
+            event.target.classList.add('ativa');
+            document.getElementById('aba-' + nome).classList.add('visivel');
+            
+            if (nome === 'semanal') gerarRelatorioSemanal();
+            if (nome === 'mensal') gerarRelatorioMensal();
+        }
+
+        function adicionarTarefa() {
+            const nome = document.getElementById('nomeTarefa').value.trim();
+            const data = document.getElementById('dataTarefa').value;
+            const tempo = document.getElementById('tempoTarefa').value;
+            const cat = document.getElementById('categoria').value;
+            if (!nome) { alert('Informe o nome!'); return; }
+
+            tarefas.push({ id: Date.now(), nome, data, tempo, categoria: cat, concluida: false });
+            salvar(); renderizarTarefas(); atualizarVisaoGeral();
+
+            document.getElementById('nomeTarefa').value = '';
+            document.getElementById('tempoTarefa').value = '';
+        }
+        function alternarConcluida(id) {
+            const t = tarefas.find(x => x.id === id);
+            if (t) { t.concluida = !t.concluida; salvar(); renderizarTarefas(); atualizarVisaoGeral(); }
+        }
+        function excluirTarefa(id) {
+            tarefas = tarefas.filter(x => x.id !== id);
+            salvar(); renderizarTarefas(); atualizarVisaoGeral();
+        }
+        function renderizarTarefas() {
+            const lista = document.getElementById('listaTarefas');
+            lista.innerHTML = '';
+            tarefas.sort((a,b) => (a.data||'').localeCompare(b.data||'')).forEach(t => {
+                const el = document.createElement('div');
+                el.className = `tarefa ${t.concluida ? 'tarefa-concluida' : ''}`;
+                el.innerHTML = `
+                    <span class="tarefa-nome">${t.nome}</span>
+                    <span class="data-tarefa">${t.data || 'Sem data'}</span>
+                    <span class="categoria">${t.categoria}</span>
+                    <span class="tempo">${t.tempo || '--:--'}</span>
+                    <div class="acoes">
+                        <button onclick="alternarConcluida(${t.id})">${t.concluida ? '↩️' : '✓'}</button>
+                        <button class="btn-excluir" onclick="excluirTarefa(${t.id})">🗑️</button>
+                    </div>
+                `;
+                lista.appendChild(el);
+            });
+        }
+
+        function atualizarVisaoGeral() {
+            const total = tarefas.length;
+            const concl = tarefas.filter(t => t.concluida).length;
+            const pend = total - concl;
+            const totalMin = tarefas.reduce((s, t) => s + horaParaMinutos(t.tempo), 0);
+
+            document.getElementById('totalTarefas').textContent = total;
+            document.getElementById('concluidas').textContent = concl;
+            document.getElementById('pendentes').textContent = pend;
+            document.getElementById('tempoTotal').textContent = minutosParaHoras(totalMin);
+
+            desenharGrafico('graficoGeral', 'bar', prepararDadosCategorias(tarefas));
+        }
+
+        function prepararDadosCategorias(lista) {
+            const cats = ['Trabalho', 'Estudo', 'Pessoal', 'Lazer'];
+            const dados = cats.map(cat => 
+                lista.filter(t => t.categoria === cat).reduce((s, t) => s + horaParaMinutos(t.tempo)/60, 0).toFixed(1)
+            );
+            return { labels: cats, dados, cores: cats.map(c => CORES_CATS[c]) };
+        }
+
+        function desenharGrafico(id, tipo, dados) {
+            if (graficos[id]) graficos[id].destroy();
+            const ctx = document.getElementById(id)?.getContext('2d');
+            if (!ctx) return;
+            graficos[id] = new Chart(ctx, {
+                type: tipo,
+                data: {
+                    labels: dados.labels,
+                    datasets: [{
+                        label: 'Horas',
+                        data: dados.dados,
+                        backgroundColor: dados.cores || '#3182ce',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function usarSemanaAtual() {
+            const hoje = new Date();
+            const diaSem = hoje.getDay();
+            const inicio = new Date(hoje);
+            inicio.setDate(hoje.getDate() - diaSem);
+            document.getElementById('inicioSemana').value = formatarDataISO(inicio);
+            gerarRelatorioSemanal();
+        }
+        function gerarRelatorioSemanal() {
+            const inicio = parseDataISO(document.getElementById('inicioSemana').value);
+            if (!inicio) return;
+            const fim = new Date(inicio); fim.setDate(inicio.getDate() + 6);
+
+            const naSemana = tarefas.filter(t => {
+                const d = parseDataISO(t.data);
+                return d && d >= inicio && d <= fim;
+            });
+
+            const totalMin = naSemana.reduce((s, t) => s + horaParaMinutos(t.tempo), 0);
+            const diasComDados = [];
+            for (let i=0; i<7; i++) {
+                const d = new Date(inicio); d.setDate(inicio.getDate()+i);
+                const str = formatarDataISO(d);
+                const tarefasDia = naSemana.filter(t => t.data === str);
+                diasComDados.push({
+                    dia: DIAS_SEMANA[d.getDay()],
+                    data: `${d.getDate()}/${d.getMonth()+1}`,
+                    qtd: tarefasDia.length,
+                    min: tarefasDia.reduce((s, x) => s + horaParaMinutos(x.tempo), 0)
+                });
+            }
+
+            document.getElementById('sem-total').textContent = naSemana.length;
+            document.getElementById('sem-concluidas').textContent = naSemana.filter(t => t.concluida).length;
+            document.getElementById('sem-horas').textContent = minutosParaHoras(totalMin);
+            const diasComHoras = diasComDados.filter(d => d.min > 0).length || 1;
+            document.getElementById('sem-media').textContent = minutosParaHoras(Math.round(totalMin/diasComHoras));
+
+            const grade = document.getElementById('gradeDiasSemana');
+            grade.innerHTML = diasComDados.map(d => `
+                <div class="card-dia">
+                    <div class="dia-semana">${d.dia}</div>
+                    <div class="horas-dia">${minutosParaHoras(d.min)}</div>
+                    <div class="qtd-dia">${d.qtd} tarefa(s)</div>
+                </div>
+            `).join('');
+
+            desenharGrafico('graficoSemana', 'bar', {
+                labels: diasComDados.map(d => d.dia),
+                dados: diasComDados.map(d => (d.min/60).toFixed(1)),
+                cores: '#3182ce'
+            });
+
+            const dadosCat = prepararDadosCategorias(naSemana);
+            const maxH = Math.max(...dadosCat.dados.map(Number)) || 1;
+            document.getElementById('catSemana').innerHTML = dadosCat.labels.map((c, i) => `
+                <div class="item-cat"><span>${c}</span><strong>${dadosCat.dados[i]}h</strong></div>
+                <div class="barra-cat"><div class="barra-preencher" style="width: ${(dadosCat.dados[i]/maxH)*100}%; background: ${dadosCat.cores[i]}"></div></div>
+            `).join('');
+        }
+
+        function popularMeses() {
+            const sel = document.getElementById('mesRelatorio');
+            const agora = new Date();
+            for (let m=1; m<=12; m++) {
+                const opt = document.createElement('option');
+                opt.value = `${agora.getFullYear()}-${String(m).padStart(2,'0')}`;
+                opt.textContent = new Date(agora.getFullYear(), m-1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+                sel.appendChild(opt);
+            }
+        }
+        function usarMesAtual() {
+            const agora = new Date();
+            document.getElementById('mesRelatorio').value = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+            gerarRelatorioMensal();
+        }
+        function gerarRelatorioMensal() {
+            const [ano, mes] = (document.getElementById('mesRelatorio').value || '').split('-').map(Number);
+            if (!ano) return;
+            const inicio = new Date(ano, mes-1, 1);
+            const fim = new Date(ano, mes, 0);
+
+            const noMes = tarefas.filter(t => {
+                const d = parseDataISO(t.data);
+                return d && d >= inicio && d <= fim;
+            });
+
+            const totalMin = noMes.reduce((s, t) => s + horaParaMinutos(t.tempo), 0);
+            const diasComDados = new Set(noMes.map(t => t.data)).size || 1;
+
+            document.getElementById('mes-total').textContent = noMes.length;
+            document.getElementById('mes-concluidas').textContent = noMes.filter(t => t.concluida).length;
+            document.getElementById('mes-horas').textContent = minutosParaHoras(totalMin);
+            document.getElementById('mes-media').textContent = minutosParaHoras(Math.round(totalMin/diasComDados));
+
+            const semanas = [];
+            for (let s=0; s<5; s++) {
+                const fimSem = new Date(inicio.getFullYear(), inicio.getMonth(), 1 + (s+1)*7 - 1);
+                const fimLimite = fimSem > fim ? fim : fimSem;
+                const tarefasSem = noMes.filter(t => {
+                    const d = parseDataISO(t.data);
+                    return d >= new Date(inicio.getFullYear(), inicio.getMonth(), 1+s*7) && d <= fimLimite;
+                });
+                semanas.push({ nome: `Sem ${s+1}`, horas: tarefasSem.reduce((s, t) => s + horaParaMinutos(t.tempo)/60, 0).toFixed(1) });
+            }
+            desenharGrafico('graficoMes', 'bar', {
+                labels: semanas.map(s => s.nome),
+                dados: semanas.map(s => s.horas),
+                cores: '#6b46c1'
+            });
+
+            const dadosCat = prepararDadosCategorias(noMes);
+            const maxH = Math.max(...dadosCat.dados.map(Number)) || 1;
+            document.getElementById('catMes').innerHTML = dadosCat.labels.map((c, i) => `
+                <div class="item-cat"><span>${c}</span><strong>${dadosCat.dados[i]}h</strong></div>
+                <div class="barra-cat"><div class="barra-preencher" style="width: ${(dadosCat.dados[i]/maxH)*100}%; background: ${dadosCat.cores[i]}"></div></div>
+            `).join('');
+        }
+
+        // 🔄 COMPARAÇÃO DE PERÍODOS
+        function preencherDatasComparacao() {
+            const hoje = new Date();
+            const semPassada = new Date(hoje); semPassada.setDate(hoje.getDate() - 14);
+            const semAtual = new Date(hoje); semAtual.setDate(hoje.getDate() - 7);
+            
+            document.getElementById('comp1-inicio').value = formatarDataISO(semPassada);
+            document.getElementById('comp1-fim').value = formatarDataISO(new Date(semPassada.getTime() + 6*86400000));
+            document.getElementById('comp2-inicio').value = formatarDataISO(semAtual);
+            document.getElementById('comp2-fim').value = formatarDataISO(new Date(semAtual.getTime() + 6*86400000));
+        }
+
+        function calcularComparacao() {
+            const i1 = parseDataISO(document.getElementById('comp1-inicio').value);
+            const f1 = parseDataISO(document.getElementById('comp1-fim').value);
+            const i2 = parseDataISO(document.getElementById('comp2-inicio').value);
+            const f2 = parseDataISO(document.getElementById('comp2-fim').value);
+
+            if (!i1 || !f1 || !i2 || !f2) { alert('Preencha todas as datas!'); return; }
+
+            document.getElementById('load-compare').style.display = 'block';
+            document.getElementById('resultado-compare').style.display = 'none';
+
+            setTimeout(() => {
+                const p1 = tarefas.filter(t => {
+                    const d = parseDataISO(t.data); return d && d >= i1 && d <= f1;
+                });
+                const p2 = tarefas.filter(t => {
+                    const d = parseDataISO(t.data); return d >= i2 && d <= f2;
+                });
+
+                document.getElementById('tit-comp1').textContent = `${i1.toLocaleDateString('pt-BR')} a ${f1.toLocaleDateString('pt-BR')}`;
+                document.getElementById('tit-comp2').textContent = `${i2.toLocaleDateString('pt-BR')} a ${f2.toLocaleDateString('pt-BR')}`;
+
+                const tot1 = p1.length, tot2 = p2.length;
+                const conc1 = p1.filter(t => t.concluida).length;
+                const conc2 = p2.filter(t => t.concluida).length;
+                const hor1 = p1.reduce((s, t) => s + horaParaMinutos(t.tempo), 0);
+                const hor2 = p2.reduce((s, t) => s + horaParaMinutos(t.tempo), 0);
+
+                document.getElementById('c1-total').textContent = tot1;
+                document.getElementById('c1-concluidas').textContent = conc1;
+                document.getElementById('c1-horas').textContent = minutosParaHoras(hor1);
+                document.getElementById('c2-total').textContent = tot2;
+                document.getElementById('c2-concluidas').textContent = conc2;
+                document.getElementById('c2-horas').textContent = minutosParaHoras(hor2);
+
+                function mostrarDif(elId, v1, v2, suf='') {
+                    const dif = v2 - v1;
+                    const el = document.getElementById(elId);
+                    if (dif > 0) {
+                        el.textContent = `↑ Aumentou ${dif}${suf}`;
+                        el.className = 'diferenca positivo';
+                    } else if (dif < 0) {
+                        el.textContent = `↓ Diminuiu ${Math.abs(dif)}${suf}`;
+                        el.className = 'diferenca negativo';
+                    } else {
+                        el.textContent = `Sem variação`;
+                        el.className = 'diferenca neutro';
+                    }
+                }
+                mostrarDif('dif-total', tot1, tot2, ' tarefas');
+                mostrarDif('dif-concluidas', conc1, conc2, ' tarefas');
+                mostrarDif('dif-horas', Math.round(hor1/60), Math.round(hor2/60), 'h');
+
+                // Gráfico comparativo
+                const cats = ['Trabalho', 'Estudo', 'Pessoal', 'Lazer'];
+                const h1 = cats.map(c => p1.filter(t => t.categoria===c).reduce((s,t)=>s+horaParaMinutos(t.tempo)/60,0).toFixed(1));
+                const h2 = cats.map(c => p2.filter(t => t.categoria===c).reduce((s,t)=>s+horaParaMinutos(t.tempo)/60,0).toFixed(1));
+
+                if (graficos.compara) graficos.compara.destroy();
+                const ctx = document.getElementById('graficoComparacao').getContext('2d');
+                graficos.compara = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: cats,
+                        datasets: [
+                            { label: 'Período 1', data: h1, backgroundColor: '#90cdf4', borderRadius: 4 },
+                            { label: 'Período 2', data: h2, backgroundColor: '#3182ce', borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'top' } },
+                        scales: { y: { beginAtZero: true, title: { display: true, text: 'Horas' } } }
+                    }
+                });
+
+                document.getElementById('load-compare').style.display = 'none';
+                document.getElementById('resultado-compare').style.display = 'block';
+            }, 500);
+        }
+
+        // 📄 EXPORTAR PARA PDF
+        async function exportarPDF(idSecao) {
+            const secao = document.getElementById(idSecao);
+            if (!secao) return;
+
+            const btnAnterior = secao.querySelector('.botoes-exportar');
+            if (btnAnterior) btnAnterior.style.display = 'none';
+
+            try {
+                const canvas = await html2canvas(secao, {
+                    scale: 2, useCORS: true, logging: false,
+                    background: '#ffffff'
+                });
+
+                const { width, height } = canvas;
+                const pdf = new jsPDF({ orientation: width > height ? 'l' : 'p', unit: 'mm', format: 'a4' });
+                const pdfW = pdf.internal.pageSize.getWidth();
+                const pdfH = pdf.internal.pageSize.getHeight();
+                const ratio = Math.min(pdfW / width, pdfH / height) * 0.95;
+                const imgW = width * ratio;
+                const imgH = height * ratio;
+                const x = (pdfW - imgW) / 2;
+
+                pdf.addImage(canvas, 'PNG', x, 8, imgW, imgH);
+                pdf.save(`TaskTime_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
+            } catch (erro) {
+                alert('Erro ao gerar PDF. Tente usar a opção "Imprimir" e salve como PDF.');
+                console.error(erro);
+            }
+
+            if (btnAnterior) btnAnterior.style.display = 'flex';
+        }
+
+        atualizarDataHora();
+        setInterval(atualizarDataHora, 1000);
+        carregar();
+    </script>
+    <!-- PWA: Registro do Service Worker + Botão Instalar -->
+     <script>
+         let promptInstalar;
+         const botaoInstalar = document.createElement('button');
+         botaoInstalar.textContent = '📥 Instalar App';
+         botaoInstalar.style.cssText = `
+             position: fixed; bottom: 20px; right: 20px; z-index: 999;
+             padding: 12px 20px; background: #3182ce; color: white; border: none;
+             border-radius: 8px; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+         `;
+         botaoInstalar.onclick = () => {
+             if (promptInstalar) {
+                 promptInstalar.prompt();
+                 promptInstalar.userChoice.then(res => {
+                     if (res.outcome === 'accepted') alert('✅ App instalado! Confira sua tela inicial.');
+                     botaoInstalar.style.display = 'none';
+                 });
+             }
+         };
+         window.addEventListener('beforeinstallprompt', (e) => {
+             e.preventDefault();
+             promptInstalar = e;
+             document.body.appendChild(botaoInstalar);
+         });
+         window.addEventListener('appinstalled', () => {
+             alert('✅ TaskTime instalado com sucesso! 📱');
+             botaoInstalar.style.display = 'none';
+         });
+         if ('serviceWorker' in navigator) {
+             navigator.serviceWorker.register('./sw.js')
+                 .then(() => console.log('✅ Service Worker registrado — app funciona offline!'));
+         }
+     </script>
+</body>
+</html>
