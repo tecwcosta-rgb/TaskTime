@@ -288,10 +288,10 @@
                 <input type="date" id="dataTarefa">
                 <input type="time" id="tempoTarefa">
                 <select id="categoria">
-                    <option value="Trabalho">💼 Trabalho</option>
-                    <option value="Estudo">📚 Estudo</option>
-                    <option value="Pessoal">🏠 Pessoal</option>
-                    <option value="Lazer">🎮 Lazer</option>
+                    <option value="Grupo">💼 Grupo</option>
+                    <option value="Reunião">📚 Reunião</option>
+                    <option value="Plantão">🏠 Plantão</option>
+                    <option value="Farmácia">🎮 Farmácia</option>
                 </select>
                 <button onclick="adicionarTarefa()">+ Adicionar</button>
             </section>
@@ -427,7 +427,7 @@
         let graficos = {};
 
         const CORES_CATS = {
-            'Trabalho': '#3182ce', 'Estudo': '#805ad5', 'Pessoal': '#38a169', 'Lazer': '#f6ad55'
+            'Grupo': '#3182ce', 'Reunão': '#805ad5', 'Plantão': '#38a169', 'Farmácia': '#f6ad55'
         };
         const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -540,7 +540,7 @@
         }
 
         function prepararDadosCategorias(lista) {
-            const cats = ['Trabalho', 'Estudo', 'Pessoal', 'Lazer'];
+            const cats = ['Grupo', 'Reunão', 'Plantão', 'Farmácia'];
             const dados = cats.map(cat => 
                 lista.filter(t => t.categoria === cat).reduce((s, t) => s + horaParaMinutos(t.tempo)/60, 0).toFixed(1)
             );
