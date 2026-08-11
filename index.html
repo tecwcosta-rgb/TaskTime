@@ -540,7 +540,7 @@
         }
 
         function prepararDadosCategorias(lista) {
-            const cats = ['Grupo', 'Reunão', 'Plantão', 'Farmácia'];
+            const cats = ['Grupo', 'Reunião', 'Plantão', 'Farmácia'];
             const dados = cats.map(cat => 
                 lista.filter(t => t.categoria === cat).reduce((s, t) => s + horaParaMinutos(t.tempo)/60, 0).toFixed(1)
             );
