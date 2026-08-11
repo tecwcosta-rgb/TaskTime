@@ -756,7 +756,7 @@
                 mostrarDif('dif-horas', Math.round(hor1/60), Math.round(hor2/60), 'h');
 
                 // Gráfico comparativo
-                const cats = ['Trabalho', 'Estudo', 'Pessoal', 'Lazer'];
+                const cats = ['Grupo', 'Reunião', 'Plantão', 'Farmácia'];
                 const h1 = cats.map(c => p1.filter(t => t.categoria===c).reduce((s,t)=>s+horaParaMinutos(t.tempo)/60,0).toFixed(1));
                 const h2 = cats.map(c => p2.filter(t => t.categoria===c).reduce((s,t)=>s+horaParaMinutos(t.tempo)/60,0).toFixed(1));
 
